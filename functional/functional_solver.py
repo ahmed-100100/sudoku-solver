@@ -1,6 +1,6 @@
 # functional_solver.py
 from typing import Optional, Tuple
-from functional.functional_helpers import (
+from functional.utlils_functional import (
     Board,
     CandidatesBoard,
     all_candidates,
