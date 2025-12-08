@@ -1,28 +1,34 @@
-"""
-sudoku_gui.py
-Sudoku GUI (UI only) connected to functional solver logic.
-All old backtracking logic was removed.
-"""
-
+# sudoku_gui.py
 import tkinter as tk
 from tkinter import messagebox
 import random
 import copy
 
+# Functional solver imports
 from functional_solver import solve as functional_solve
 from functional_helpers import to_immutable, from_immutable, has_conflict
+
+# Imperative solver imports
+from utils_imperative import (
+    Board,
+    CandidatesBoard,
+    all_candidates,
+    cell_has_no_candidates,
+    copy_board,
+    has_conflict as has_conflict_imp,
+    is_solved as is_solved_imp
+)
+from solver_imperative import solve as imperative_solve
 
 GRID_SIZE = 9
 BOX_SIZE = 3
 REMOVED_CELLS = 40
-
 
 class Sudoku:
     def __init__(self):
         self.board = [[0]*GRID_SIZE for _ in range(GRID_SIZE)]
 
     def generate_full_board(self):
-        """Generate a full solved board using random backtracking ONLY for puzzle creation."""
         self.board = [[0]*GRID_SIZE for _ in range(GRID_SIZE)]
 
         def possible(r, c, val):
@@ -69,6 +75,7 @@ class Sudoku:
             removed += 1
         return self.board
 
+
 class SudokuGUI(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -77,6 +84,7 @@ class SudokuGUI(tk.Frame):
         self.original = None
         self.cells = {}
         self.selected = None
+        self.use_functional = True  # default solver
         self.create_widgets()
         self.new_puzzle()
 
@@ -106,6 +114,7 @@ class SudokuGUI(tk.Frame):
                         e.bind("<KeyRelease>", self._make_key_handler(r,c))
                         self.cells[(r,c)] = e
 
+        # Buttons
         btn_frame = tk.Frame(top_frame)
         btn_frame.grid(row=1, column=0, pady=(5,0))
         btns = [
@@ -122,10 +131,25 @@ class SudokuGUI(tk.Frame):
                       activebackground="#45A049",
                       padx=10, pady=5, bd=3).grid(row=0, column=i, padx=5)
 
+        # Solver choice (Functional / Imperative)
+        solver_frame = tk.Frame(top_frame)
+        solver_frame.grid(row=2, column=0, pady=(5,0))
+        tk.Label(solver_frame, text="Choose Solver:").pack(side="left")
+        tk.Button(solver_frame, text="Functional", command=lambda: self.set_solver(True),
+                  bg="#2196F3", fg="white", padx=8, pady=3).pack(side="left", padx=5)
+        tk.Button(solver_frame, text="Imperative", command=lambda: self.set_solver(False),
+                  bg="#FF5722", fg="white", padx=8, pady=3).pack(side="left", padx=5)
+
         self.status_var = tk.StringVar(value="Ready")
         tk.Label(self.parent, textvariable=self.status_var, font=("Helvetica",12)).pack(pady=(5,10))
         self.parent.resizable(False, False)
 
+    def set_solver(self, functional: bool):
+        self.use_functional = functional
+        mode = "Functional" if functional else "Imperative"
+        self.status_var.set(f"{mode} solver selected")
+
+    # Focus & key handlers
     def _make_focus_handler(self, r, c):
         def handler(_):
             self.selected = (r,c)
@@ -165,8 +189,11 @@ class SudokuGUI(tk.Frame):
         puzzle = self.sudoku.make_puzzle()
         self.original = copy.deepcopy(puzzle)
 
-      
-        solved = functional_solve(copy.deepcopy(puzzle))
+        # Solve puzzle in background for hints / solve button
+        if self.use_functional:
+            solved = functional_solve(copy.deepcopy(puzzle))
+        else:
+            solved = imperative_solve(copy.deepcopy(puzzle))
         self.solved_board = solved
 
         for r in range(9):
@@ -186,17 +213,24 @@ class SudokuGUI(tk.Frame):
 
     # ------------------------ SOLVE ------------------------
     def solve_current(self):
-        if has_conflict(to_immutable(self.sudoku.board)):
-            messagebox.showwarning("Sudoku", "Cannot solve: conflicts exist.")
-            self.status_var.set("Conflicts detected!")
-            return
+        board = self.sudoku.board
+        if self.use_functional:
+            if has_conflict(to_immutable(board)):
+                messagebox.showwarning("Sudoku", "Cannot solve: conflicts exist.")
+                self.status_var.set("Conflicts detected!")
+                return
+            solved = functional_solve(copy.deepcopy(board))
+        else:
+            if has_conflict_imp(board):
+                messagebox.showwarning("Sudoku", "Cannot solve: conflicts exist.")
+                self.status_var.set("Conflicts detected!")
+                return
+            solved = imperative_solve(copy.deepcopy(board))
 
-        solved = functional_solve(copy.deepcopy(self.sudoku.board))
         if solved is None:
             messagebox.showinfo("Sudoku","No solution found.")
             return
 
-    
         for r in range(9):
             for c in range(9):
                 e = self.cells[(r,c)]
@@ -209,21 +243,25 @@ class SudokuGUI(tk.Frame):
 
     # ------------------------ VALIDATE ------------------------
     def validate_current(self):
-        board_immutable = to_immutable(self.sudoku.board)
-        if not has_conflict(board_immutable):
+        board = self.sudoku.board
+        if self.use_functional:
+            board_immutable = to_immutable(board)
+            conflicts = has_conflict(board_immutable)
+        else:
+            conflicts = has_conflict_imp(board)
+
+        if not conflicts:
             self.status_var.set("Board valid.")
             messagebox.showinfo("Validate", "No conflicts!")
         else:
-          
             for r in range(9):
                 for c in range(9):
-                    val = self.sudoku.board[r][c]
+                    val = board[r][c]
                     if val != 0:
-                      
-                        row_vals = [self.sudoku.board[r][j] for j in range(9) if j != c]
-                        col_vals = [self.sudoku.board[i][c] for i in range(9) if i != r]
+                        row_vals = [board[r][j] for j in range(9) if j != c]
+                        col_vals = [board[i][c] for i in range(9) if i != r]
                         br, bc = (r//3)*3, (c//3)*3
-                        box_vals = [self.sudoku.board[i][j] for i in range(br, br+3) for j in range(bc, bc+3) if (i,j)!=(r,c)]
+                        box_vals = [board[i][j] for i in range(br, br+3) for j in range(bc, bc+3) if (i,j)!=(r,c)]
                         if val in row_vals or val in col_vals or val in box_vals:
                             self.cells[(r,c)].config(background="#FFC3C3")
             self.status_var.set("Conflicts detected.")
@@ -246,7 +284,7 @@ class SudokuGUI(tk.Frame):
 
     # ------------------------ HINT ------------------------
     def give_hint(self):
-        if not self.solved_board:
+        if not hasattr(self, "solved_board") or self.solved_board is None:
             messagebox.showinfo("Hint","No solved board available.")
             return
 
