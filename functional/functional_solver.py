@@ -1,9 +1,13 @@
 # functional_solver.py
 from typing import Optional, Tuple
-from functional_helpers import (
-    Board, CandidatesBoard,
-    all_candidates, is_solved, to_immutable, from_immutable,
-    cell_has_no_candidates
+from functional.functional_helpers import (
+    Board,
+    CandidatesBoard,
+    all_candidates,
+    is_solved,
+    to_immutable,
+    from_immutable,
+    cell_has_no_candidates,
 )
 
 # Immutable board helper: set a single cell's value and return a new Board
@@ -88,7 +92,7 @@ def solve(input_board) -> Optional[list]:
     else:
         b = input_board  # assume already immutable
     # quick conflict check
-    from functional_helpers import has_conflict
+    from functional.functional_helpers import has_conflict
     if has_conflict(b):
         return None
     res = search(b)
