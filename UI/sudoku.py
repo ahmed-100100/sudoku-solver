@@ -3,13 +3,18 @@ import tkinter as tk
 from tkinter import messagebox
 import random
 import copy
+import sys
+import os
+
+# Add parent directory to Python path to allow imports from functional/imperative modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Functional solver imports
-from functional_solver import solve as functional_solve
-from functional_helpers import to_immutable, from_immutable, has_conflict
+from functional.functional_solver import solve as functional_solve
+from functional.utils_functional import to_immutable, from_immutable, has_conflict
 
 # Imperative solver imports
-from utils_imperative import (
+from imperative.utils_imperative import (
     Board,
     CandidatesBoard,
     all_candidates,
@@ -18,7 +23,7 @@ from utils_imperative import (
     has_conflict as has_conflict_imp,
     is_solved as is_solved_imp
 )
-from solver_imperative import solve as imperative_solve
+from imperative.solver_imperative import solve as imperative_solve
 
 GRID_SIZE = 9
 BOX_SIZE = 3
