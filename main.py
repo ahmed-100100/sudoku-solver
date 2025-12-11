@@ -1,6 +1,25 @@
 from functional.functional_solver import solve as solve_fun
 from imperative.solver_imperative import solve as solve_imp
-# call them as needed
+
+
+def print_sudoku(board):
+    if board is None:
+        print("No solution")
+        return
+    
+    print("+" + "-" * 21 + "+")
+    for i, row in enumerate(board):
+        print("|", end="")
+        for j, cell in enumerate(row):
+            if j % 3 == 0 and j > 0:
+                print(" |", end="")
+            print(f" {cell if cell != 0 else '.'}", end="")
+        print(" |")
+        if (i + 1) % 3 == 0 and i < 8:
+            print("|" + "-" * 7 + "+" + "-" * 7 + "+" + "-" * 7 + "|")
+    print("+" + "-" * 21 + "+")
+
+
 puzzle = [
     [5,3,0,0,7,0,0,0,0],
     [6,0,0,1,9,5,0,0,0],
@@ -19,4 +38,5 @@ sol_fun = solve_fun(puzzle)
 print("imperative solved:", sol_imp is not None)
 print("functional solved:", sol_fun is not None)
 print("solutions match:", sol_imp == sol_fun)
-print(sol_imp)
+print("\nImperative Solution:")
+print_sudoku(sol_imp)

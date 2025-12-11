@@ -7,6 +7,7 @@ from imperative.utils_imperative import (
     copy_board,
     has_conflict,
     is_solved,
+    apply_to_cells,
 )
 
 
@@ -15,17 +16,16 @@ def set_cell(board: Board, r: int, c: int, val: int) -> None:
 
 
 def propagate(board: Board) -> Optional[Board]:
-    """Fill all singleton candidates until stable. Returns None on contradiction."""
     while True:
         cands = all_candidates(board)
         if cell_has_no_candidates(cands):
             return None
 
         singles: List[Tuple[int, int, int]] = []
-        for r in range(9):
-            for c in range(9):
-                if board[r][c] == 0 and len(cands[r][c]) == 1:
-                    singles.append((r, c, cands[r][c][0]))
+        def check_single(r: int, c: int):
+            if board[r][c] == 0 and len(cands[r][c]) == 1:
+                singles.append((r, c, cands[r][c][0]))
+        apply_to_cells(check_single) #the higher order function
 
         if not singles:
             return board
