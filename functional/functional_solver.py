@@ -21,7 +21,6 @@ from functional.utils_functional import (
 
 T = TypeVar('T')
 
-
 # ============================================================================
 # CUSTOM HIGHER-ORDER FUNCTION: try_each
 # PARADIGM: Higher-Order Function (takes function, returns function)
@@ -44,7 +43,7 @@ def try_each(test_func: Callable[[T], Optional[Board]]) -> Callable[[Tuple[T, ..
         if result is not None:
             return result
         return try_all(items[1:])  # Recursive tail call
-    
+
     return try_all
 
 

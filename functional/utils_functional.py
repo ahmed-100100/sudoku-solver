@@ -16,8 +16,17 @@ U = TypeVar('U')
 # ============================================================================
 # CORE CUSTOM HIGHER-ORDER HELPERS (replace built-in map/filter/reduce/all/any)
 # ============================================================================
+
 def custom_map(func: Callable[[T], U], items) -> Tuple[U, ...]:
-    """Our own map implementation (returns tuple for immutability)."""
+    """
+    custom_map applies a given function `func` to each element in the input
+    sequence `items`, returning an immutable tuple with all results.
+    It's a recursive, functional-style replacement for Python's built-in map,
+    but always returns a tuple (never a list or generator).
+    
+    Example:
+        custom_map(lambda x: x * 2, [1, 2, 3])  # returns (2, 4, 6)
+    """
     items_tuple = tuple(items)
     if not items_tuple:
         return ()
@@ -25,7 +34,14 @@ def custom_map(func: Callable[[T], U], items) -> Tuple[U, ...]:
 
 
 def custom_filter(predicate: Callable[[T], bool], items) -> Tuple[T, ...]:
-    """Our own filter implementation (returns tuple for immutability)."""
+    """
+    custom_filter retains only those elements from `items` for which the
+    function `predicate` returns True. Like the built-in filter, but
+    always returns a tuple, not an iterator.
+    
+    Example:
+        custom_filter(lambda x: x > 0, [-1, 0, 1, 2])  # returns (1, 2)
+    """
     items_tuple = tuple(items)
     if not items_tuple:
         return ()
@@ -37,7 +53,14 @@ def custom_filter(predicate: Callable[[T], bool], items) -> Tuple[T, ...]:
 
 
 def custom_reduce(func: Callable[[U, T], U], items, initializer: U) -> U:
-    """Our own reduce implementation (requires initializer for clarity)."""
+    """
+    custom_reduce reduces the sequence `items` into a single value by
+    recursively applying the binary function `func`, starting from
+    `initializer`. Like functools.reduce but functional and always explicit.
+    
+    Example:
+        custom_reduce(lambda acc, x: acc + x, [1,2,3], 0)  # returns 6
+    """
     items_tuple = tuple(items)
     if not items_tuple:
         return initializer
@@ -45,7 +68,15 @@ def custom_reduce(func: Callable[[U, T], U], items, initializer: U) -> U:
 
 
 def custom_all(items) -> bool:
-    """Our own all implementation."""
+    """
+    custom_all returns True if every value in the iterable `items`
+    evaluates as True, otherwise returns False. It's like built-in all()
+    but implemented recursively.
+    
+    Example:
+        custom_all([1, True, "nonempty"])  # returns True
+        custom_all([1, 0, 2])              # returns False
+    """
     items_tuple = tuple(items)
     if not items_tuple:
         return True
@@ -53,7 +84,15 @@ def custom_all(items) -> bool:
 
 
 def custom_any(items) -> bool:
-    """Our own any implementation."""
+    """
+    custom_any returns True if any value in the iterable `items`
+    evaluates as True, otherwise returns False. Equivalent to built-in any()
+    but recursively implemented.
+    
+    Example:
+        custom_any([0, 0, 3])  # returns True
+        custom_any([0, None])  # returns False
+    """
     items_tuple = tuple(items)
     if not items_tuple:
         return False
@@ -69,9 +108,14 @@ def custom_any(items) -> bool:
 # ============================================================================
 def map_2d(func: Callable[[int, int], T], rows: int = 9, cols: int = 9) -> Tuple[Tuple[T, ...], ...]:
     """
-    Higher-order function that maps a function over a 2D grid.
-    Takes a function that accepts (row, col) and returns a value.
-    Returns an immutable 2D tuple structure.
+    map_2d applies a given function `func` to every (row, col) coordinate
+    in a 2D grid of the specified shape (default 9x9). It returns an
+    immutable 2D tuple of tuples structure.
+    
+    Example:
+        # Fill 2D board with coordinate sums:
+        map_2d(lambda r, c: r + c, rows=2, cols=3)
+        # returns ((0,1,2), (1,2,3))
     """
     def build_row(r: int) -> Tuple[T, ...]:
         def build_cell(c: int) -> T:
@@ -94,9 +138,12 @@ def filter_and_transform(
     items: Tuple[T, ...]
 ) -> Tuple[U, ...]:
     """
-    Higher-order function that filters items by predicate, then transforms them.
-    Takes two functions: one to filter, one to transform.
-    Returns transformed tuple of items that passed the predicate.
+    filter_and_transform first filters `items` using the `predicate`, then applies
+    `transformer` to each item that passed, returning a tuple of results.
+    This is a higher-order function combining the logic of filter and map.
+    
+    Example:
+        filter_and_transform(lambda x: x > 2, str, (1,2,3,4))  # returns ('3', '4')
     """
     def process_item(item: T) -> Tuple[U, ...]:
         if predicate(item):
