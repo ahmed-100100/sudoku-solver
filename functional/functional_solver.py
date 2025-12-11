@@ -36,16 +36,14 @@ def try_each(test_func: Callable[[T], Optional[Board]]) -> Callable[[Tuple[T, ..
     This demonstrates function composition and closures.
     """
     def try_all(items: Tuple[T, ...]) -> Optional[Board]:
-        """Try the test function on each item until one succeeds"""
         if not items:
             return None
         result = test_func(items[0])
         if result is not None:
             return result
-        return try_all(items[1:])  # Recursive tail call
+        return try_all(items[1:])  # Fully recursive, no loops
 
     return try_all
-
 
 # ============================================================================
 # CUSTOM HIGHER-ORDER FUNCTION: compose_board_transforms
@@ -61,7 +59,7 @@ def compose_board_transforms(
     Higher-order function that composes board transformation functions.
     Takes multiple functions and returns their composition (right to left).
     If any function returns None, the whole composition returns None.
-    Implemented recursively to follow the functional paradigm (no loops).
+    Purely recursive, no loops.
     """
     def composed(board: Board) -> Optional[Board]:
         def apply_funcs(idx: int, result: Optional[Board]) -> Optional[Board]:
@@ -71,8 +69,6 @@ def compose_board_transforms(
                 return result
             return apply_funcs(idx - 1, funcs[idx](result))
         return apply_funcs(len(funcs) - 1, board)
-    return composed
-    
     return composed
 
 # ============================================================================
@@ -87,21 +83,17 @@ def set_cell(board: Board, r: int, c: int, val: int) -> Board:
     Original board remains unchanged - core principle of functional programming.
     """
     def build_row(row_idx: int, row_data: Tuple[int, ...]) -> Tuple[int, ...]:
-        """Helper to build a row, updating column c if this is row r"""
         if row_idx != r:
-            return row_data  # Keep original row unchanged
-        # Use custom_map to transform the target row
+            return row_data
         return custom_map(
             lambda col_idx: val if col_idx == c else row_data[col_idx],
             range(9)
         )
-    
-    # Map over all rows with their indices, building new board
+
     return custom_map(
         lambda row_idx: build_row(row_idx, board[row_idx]),
         range(9)
     )
-
 
 # ============================================================================
 # PARADIGM: Recursion + Functional Programming using custom_filter/custom_map/custom_reduce
@@ -116,52 +108,43 @@ def propagate(board: Board) -> Optional[Board]:
     Continues recursively until no more changes occur (fixed point reached).
     Returns None if contradiction detected (no solution possible).
     """
+    def all_coords(r: int = 0, c: int = 0) -> Tuple[Tuple[int, int], ...]:
+        # Recursively generate all board coordinates as a tuple of pairs
+        if r == 9:
+            return ()
+        if c == 8:
+            return ((r, c),) + all_coords(r + 1, 0)
+        return ((r, c),) + all_coords(r, c + 1)
+
     def find_singletons(b: Board, cands: CandidatesBoard) -> Tuple[Tuple[int, int, int], ...]:
-        """Find all cells with exactly one candidate using functional approach"""
-        # Generate all cell coordinates
-        all_cells = [(r, c) for r in range(9) for c in range(9)]
-        
-        # Filter to cells that are empty and have exactly one candidate
-        singleton_cells = custom_filter(
+        coords = all_coords()
+        singles_filtered = custom_filter(
             lambda rc: b[rc[0]][rc[1]] == 0 and len(cands[rc[0]][rc[1]]) == 1,
-            all_cells
+            coords
         )
-        
-        # Map to (row, col, value) triples
         return custom_map(
             lambda rc: (rc[0], rc[1], cands[rc[0]][rc[1]][0]),
-            singleton_cells
+            singles_filtered
         )
-    
+
     def apply_singles(b: Board, singles: Tuple[Tuple[int, int, int], ...]) -> Board:
-        """Apply multiple cell updates using reduce (functional fold operation)"""
-        # reduce applies set_cell for each singleton, threading board through
         return custom_reduce(
-            lambda acc_board, rcv: set_cell(acc_board, rcv[0], rcv[1], rcv[2]),
+            lambda acc_b, rcv: set_cell(acc_b, rcv[0], rcv[1], rcv[2]),
             singles,
-            b  # initial accumulator
+            b
         )
-    
-    # Tail-recursive propagation loop
+
     def loop(b: Board) -> Optional[Board]:
         cands = all_candidates(b)
-        
-        # Check for contradiction (cell with no candidates)
         if cell_has_no_candidates(cands):
             return None
-        
-        # Find all singleton cells
         singles = find_singletons(b, cands)
-        
         if not singles:
-            return b  # Fixed point reached - stable state
-        
-        # Apply all singletons and recurse (tail recursion)
+            return b
         b2 = apply_singles(b, singles)
         return loop(b2)
-    
-    return loop(board)
 
+    return loop(board)
 
 # ============================================================================
 # PARADIGM: Functional Programming using custom_reduce (fold operation)
@@ -173,40 +156,37 @@ def choose_mrv_cell(board: Board) -> Optional[Tuple[int, int, Tuple[int, ...]]]:
     """
     Choose cell with Minimum Remaining Values (MRV heuristic).
     Selects empty cell with fewest candidates to minimize search branching.
-    Uses functional reduce to find minimum without loops.
+    Uses functional reduce to find minimum. No loops.
     """
     cands = all_candidates(board)
-    
-    # Generate all empty cell coordinates with their candidates
-    all_cells = [
-        (r, c, cands[r][c])
-        for r in range(9)
-        for c in range(9)
-        if board[r][c] == 0
-    ]
-    
-    if not all_cells:
-        return None  # No empty cells
-    
-    # Use custom_reduce to find cell with minimum candidates (functional min operation)
-    def min_candidates(acc: Optional[Tuple[int, int, Tuple[int, ...]]], 
-                       cell: Tuple[int, int, Tuple[int, ...]]) -> Optional[Tuple[int, int, Tuple[int, ...]]]:
-        r, c, cell_cands = cell
-        cand_count = len(cell_cands)
-        
-        # Dead end - no candidates
-        if cand_count == 0:
-            return None
-        
-        # First cell or fewer candidates than current best
-        if acc is None or cand_count < len(acc[2]):
-            return (r, c, cell_cands)
-        
-        return acc
-    
-    # Fold over all empty cells to find the one with fewest candidates
-    return custom_reduce(min_candidates, all_cells, None)
 
+    def all_empty_cells(r: int = 0, c: int = 0) -> Tuple[Tuple[int, int, Tuple[int, ...]], ...]:
+        # Recursively generate all empty cells (r, c, cands[r][c])
+        if r == 9:
+            return ()
+        if c == 8:
+            rest = all_empty_cells(r + 1, 0)
+        else:
+            rest = all_empty_cells(r, c + 1)
+        if board[r][c] == 0:
+            return ((r, c, cands[r][c]),) + rest
+        else:
+            return rest
+
+    all_cells = all_empty_cells()
+    if not all_cells:
+        return None
+
+    def min_candidates(acc: Optional[Tuple[int, int, Tuple[int, ...]]],
+                       cell: Tuple[int, int, Tuple[int, ...]]) -> Optional[Tuple[int, int, Tuple[int, ...]]]:
+        _, _, cell_cands = cell
+        if len(cell_cands) == 0:
+            return None
+        if acc is None or len(cell_cands) < len(acc[2]):
+            return cell
+        return acc
+
+    return custom_reduce(min_candidates, all_cells, None)
 
 # ============================================================================
 # PARADIGM: Recursion (backtracking) + Tail-Call Optimization Pattern
@@ -222,28 +202,18 @@ def search(board: Board) -> Optional[Board]:
     Backtracks (returns None) if a branch leads to contradiction.
     Pure functional approach - no state mutation, just recursive exploration.
     """
-    # First apply constraint propagation (recursive)
     p = propagate(board)
     if p is None:
-        return None  # Contradiction detected
-    
+        return None
     if is_solved(p):
-        return p  # Base case - solution found!
-    
-    # Choose next cell to fill using MRV heuristic
+        return p
     choice = choose_mrv_cell(p)
     if choice is None:
-        return None  # Dead end - no valid choices
-    
+        return None
     r, c, candidates = choice
-    
-    # Use our custom higher-order function to try each candidate
-    # try_each takes a test function and returns a function that tries all values
     test_candidate = lambda val: search(set_cell(p, r, c, val))
-    try_all_candidates = try_each(test_candidate)  # Higher-order function returns a function!
-    
+    try_all_candidates = try_each(test_candidate)
     return try_all_candidates(candidates)
-
 
 # ============================================================================
 # PARADIGM: Pure Function + Referential Transparency
@@ -258,21 +228,10 @@ def solve(input_board) -> Optional[list]:
     Returns solution as list-of-lists, or None if no solution exists.
     Pure function - input never modified, always returns new structure.
     """
-    # Normalize to immutable Board (functional data structure)
-    if isinstance(input_board, list):
-        b = to_immutable(input_board)
-    else:
-        b = input_board  # Assume already immutable
-    
-    # Quick conflict check before starting (fail fast)
+    b = to_immutable(input_board) if isinstance(input_board, list) else input_board
     if has_conflict(b):
         return None
-    
-    # Recursive search (pure functional backtracking)
     res = search(b)
-    
     if res is None:
-        return None  # No solution exists
-    
-    # Convert back to mutable format for external use
+        return None
     return from_immutable(res)
