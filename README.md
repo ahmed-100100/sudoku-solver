@@ -154,7 +154,7 @@ sudoku-solver/
 
 ---
 
-## 🔄 How Paradigms Are Used in This Project
+## How Paradigms Are Used in This Project
 
 ### **Functional Implementation** (`functional/`)
 
@@ -174,16 +174,15 @@ CandidatesBoard = Tuple[Tuple[Tuple[int, ...], ...], ...]
 #### **Example - Setting a Cell (Functional):**
 ```python
 def set_cell(board: Board, r: int, c: int, val: int) -> Board:
-    """Returns a NEW board with the cell value changed"""
-    new_rows = []
-    for rr in range(9):
-        if rr != r:
-            new_rows.append(board[rr])
-        else:
-            # Create new tuple for modified row
-            row = tuple(board[rr][cc] if cc != c else val for cc in range(9))
-            new_rows.append(row)
-    return tuple(new_rows)  # Return entirely new board
+    """Immutable update using custom_map (no built-in map)."""
+    def build_row(row_idx: int, row_data: Tuple[int, ...]) -> Tuple[int, ...]:
+        if row_idx != r:
+            return row_data
+        return custom_map(
+            lambda col_idx: val if col_idx == c else row_data[col_idx],
+            range(9)
+        )
+    return custom_map(lambda row_idx: build_row(row_idx, board[row_idx]), range(9))
 ```
 
 **What happens:**
@@ -241,7 +240,7 @@ def set_cell(board: Board, r: int, c: int, val: int) -> None:
 
 ---
 
-## 📘 Function Reference & Paradigm Alignment
+## Function Reference & Paradigm Alignment
 
 Use this section to quickly see which **data shape** each paradigm uses and where **higher-order programming** is applied. Each entry explains the paradigm concept, what the function does, and how it achieves it.
 
@@ -340,11 +339,11 @@ Both implementations use the **same algorithm** with different paradigms:
 #### **1. Board Conversion (Immutability)**
 ```python
 def to_immutable(board: List[List[int]]) -> Board:
-    """Convert mutable list to immutable tuple"""
-    return tuple(tuple(int(cell) for cell in row) for row in board)
+    """Convert mutable list to immutable tuple using custom_map."""
+    return tuple(custom_map(lambda cell: int(cell), row) for row in board)
 
 def from_immutable(board: Board) -> List[List[int]]:
-    """Convert back to list for output"""
+    """Convert back to list for output (kept simple list conversion)."""
     return [list(row) for row in board]
 ```
 
@@ -355,42 +354,34 @@ def candidates_for(board: Board, r: int, c: int) -> Tuple[int, ...]:
     if board[r][c] != 0:
         return (board[r][c],)
     
-    # Collect used values (no mutations)
-    used = set(row_values(board, r)) | \
-           set(col_values(board, c)) | \
-           set(box_values(board, r, c))
-    
-    # Return immutable tuple
-    return tuple(x for x in range(1, 10) if x not in used)
+    used = set(row_values(board, r)) | set(col_values(board, c)) | set(box_values(board, r, c))
+    return custom_filter(lambda x: x not in used, tuple(range(1, 10)))
 ```
 
 #### **3. Constraint Propagation (Recursive)**
 ```python
 def propagate(board: Board) -> Optional[Board]:
-    """Recursive loop, returns new board"""
+    """Recursive fixed-point propagation using custom_filter/custom_reduce."""
+    def find_singletons(b: Board, cands: CandidatesBoard) -> Tuple[Tuple[int, int, int], ...]:
+        all_cells = tuple((r, c) for r in range(9) for c in range(9))
+        singleton_cells = custom_filter(
+            lambda rc: b[rc[0]][rc[1]] == 0 and len(cands[rc[0]][rc[1]]) == 1,
+            all_cells,
+        )
+        return custom_map(lambda rc: (rc[0], rc[1], cands[rc[0]][rc[1]][0]), singleton_cells)
+
+    def apply_singles(b: Board, singles: Tuple[Tuple[int, int, int], ...]) -> Board:
+        return custom_reduce(lambda acc, rcv: set_cell(acc, rcv[0], rcv[1], rcv[2]), singles, b)
+
     def loop(b: Board) -> Optional[Board]:
         cands = all_candidates(b)
-        
         if cell_has_no_candidates(cands):
             return None
-        
-        # Find singleton candidates
-        singles = []
-        for r in range(9):
-            for c in range(9):
-                if b[r][c] == 0 and len(cands[r][c]) == 1:
-                    singles.append((r, c, cands[r][c][0]))
-        
+        singles = find_singletons(b, cands)
         if not singles:
-            return b  # Stable state
-        
-        # Apply all singles immutably
-        b2 = b
-        for (r, c, v) in singles:
-            b2 = set_cell(b2, r, c, v)  # Creates new board
-        
-        return loop(b2)  # Recursive call
-    
+            return b
+        return loop(apply_singles(b, singles))
+
     return loop(board)
 ```
 
@@ -430,26 +421,21 @@ def candidates_for(board: Board, r: int, c: int) -> List[int]:
 #### **3. Constraint Propagation (Iterative Loop)**
 ```python
 def propagate(board: Board) -> Optional[Board]:
-    """Iterative loop, modifies board in place"""
-    while True:  # Explicit loop
+    """Iterative loop, modifies board in place; uses higher-order collector."""
+    while True:
         cands = all_candidates(board)
-        
         if cell_has_no_candidates(cands):
             return None
-        
-        # Find singleton candidates
-        singles: List[Tuple[int, int, int]] = []
-        for r in range(9):
-            for c in range(9):
-                if board[r][c] == 0 and len(cands[r][c]) == 1:
-                    singles.append((r, c, cands[r][c][0]))
-        
+
+        singles = collect_from_cells(
+            lambda r, c: (r, c, cands[r][c][0]) if board[r][c] == 0 and len(cands[r][c]) == 1 else None
+        )
+
         if not singles:
-            return board  # Stable state
-        
-        # Modify board directly
+            return board
+
         for r, c, v in singles:
-            set_cell(board, r, c, v)  # In-place modification
+            set_cell(board, r, c, v)
 ```
 
 **Key Points:**
@@ -480,14 +466,10 @@ def search(board: Board) -> Optional[Board]:
     
     r, c, candidates = choice
     
-    # Try each candidate (immutably)
-    for val in candidates:
-        new_board = set_cell(p, r, c, val)  # New board
-        result = search(new_board)  # Recursive
-        if result is not None:
-            return result
-    
-    return None
+    # Higher-order: use try_each to test candidates
+    test_candidate = lambda val: search(set_cell(p, r, c, val))
+    try_all = try_each(test_candidate)
+    return try_all(candidates)
 ```
 
 #### **Imperative:**
@@ -526,7 +508,7 @@ def search(board: Board) -> Optional[Board]:
 
 ---
 
-## 🤔 Why These Implementations?
+## Why These Implementations?
 
 ### **Design Decisions:**
 
