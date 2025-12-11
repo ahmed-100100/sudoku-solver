@@ -1,4 +1,7 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Callable
+# PARADIGM NOTE: Imperative solver works on mutable list-of-lists boards.
+# Higher-order programming appears via helpers from utils (apply_to_cells,
+# collect_from_cells) and the factory create_backtracking_solver.
 from imperative.utils_imperative import (
     Board,
     CandidatesBoard,
@@ -8,7 +11,34 @@ from imperative.utils_imperative import (
     has_conflict,
     is_solved,
     apply_to_cells,
+    collect_from_cells,
 )
+
+
+# ============================================================================
+# CUSTOM HIGHER-ORDER FUNCTION: create_backtracking_solver
+# PARADIGM: Higher-Order Function (returns a function)
+# WHY: Demonstrates function factories in imperative paradigm
+# HOW: Takes configuration and returns a customized solver function
+# Shows that imperative code can also use functional patterns like closures
+# ============================================================================
+def create_backtracking_solver(
+    max_depth: Optional[int] = None
+) -> Callable[[Board], Optional[Board]]:
+    """
+    Higher-order function that creates a customized solver.
+    Takes optional configuration (like max_depth) and returns a solver function.
+    Demonstrates function factory pattern in imperative code.
+    """
+    depth_counter = [0]  # Mutable counter (imperative style)
+    
+    def solver(board: Board) -> Optional[Board]:
+        if max_depth is not None and depth_counter[0] >= max_depth:
+            return None
+        depth_counter[0] += 1
+        return search(board)
+    
+    return solver
 
 # Immutable board helper: set a single cell's value
 def set_cell(board: Board, r: int, c: int, val: int) -> None:
@@ -16,16 +46,24 @@ def set_cell(board: Board, r: int, c: int, val: int) -> None:
 
 # Constraint propagation: fill all singletons repeatedly until stable
 def propagate(board: Board) -> Optional[Board]:
+    """
+    Apply constraint propagation using custom higher-order function.
+    Uses collect_from_cells to find singleton candidates.
+    """
     while True:
         cands = all_candidates(board)
         if cell_has_no_candidates(cands):
             return None
 
-        singles: List[Tuple[int, int, int]] = []
-        def check_single(r: int, c: int):
+        # Use our custom higher-order function collect_from_cells
+        # It takes a function and collects non-None results
+        def find_single(r: int, c: int) -> Optional[Tuple[int, int, int]]:
             if board[r][c] == 0 and len(cands[r][c]) == 1:
-                singles.append((r, c, cands[r][c][0]))
-        apply_to_cells(check_single) #the higher order function
+                return (r, c, cands[r][c][0])
+            return None
+        
+        # Higher-order function in action!
+        singles = collect_from_cells(find_single)
 
         if not singles:
             return board
