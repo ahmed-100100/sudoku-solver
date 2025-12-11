@@ -40,10 +40,11 @@ def create_backtracking_solver(
     
     return solver
 
-
+# Immutable board helper: set a single cell's value
 def set_cell(board: Board, r: int, c: int, val: int) -> None:
     board[r][c] = val
 
+# Constraint propagation: fill all singletons repeatedly until stable
 def propagate(board: Board) -> Optional[Board]:
     """
     Apply constraint propagation using custom higher-order function.
@@ -70,7 +71,7 @@ def propagate(board: Board) -> Optional[Board]:
         for r, c, v in singles:
             set_cell(board, r, c, v)
 
-
+# Choose cell with minimum remaining values (MRV)
 def choose_mrv_cell(board: Board) -> Optional[Tuple[int, int, List[int]]]:
     cands = all_candidates(board)
     best: Optional[Tuple[int, int, List[int]]] = None
@@ -87,7 +88,7 @@ def choose_mrv_cell(board: Board) -> Optional[Tuple[int, int, List[int]]]:
                     best = (r, c, cand_list)
     return best
 
-
+# search with propagation + MRV
 def search(board: Board) -> Optional[Board]:
     p_board = copy_board(board)
     p = propagate(p_board)

@@ -32,13 +32,29 @@ puzzle = [
     [0,0,0,0,8,0,0,7,9],
 ]
 
-sol_imp = solve_imp(puzzle)
-sol_fun = solve_fun(puzzle)
+hardpuzzle = [
+    [8, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 3, 6, 0, 0, 0, 0, 0],
+    [0, 7, 0, 0, 9, 0, 2, 0, 0],
+    [0, 5, 0, 0, 0, 7, 0, 0, 0],
+    [0, 0, 0, 0, 4, 5, 7, 0, 0],
+    [0, 0, 0, 1, 0, 0, 0, 3, 0],
+    [0, 0, 1, 0, 0, 0, 0, 6, 8],
+    [0, 0, 8, 5, 0, 0, 0, 1, 0],
+    [0, 9, 0, 0, 0, 0, 4, 0, 0]
+]
 
-print("imperative solved:", sol_imp is not None)
-print("functional solved:", sol_fun is not None)
-print("solutions match:", sol_imp == sol_fun)
+# sol_imp = solve_imp(puzzle)
+# sol_fun = solve_fun(puzzle)
+sol_imp_hard = solve_imp(hardpuzzle)
+sol_fun_hard = solve_fun(hardpuzzle)
+
+print("imperative solved:", sol_imp_hard is not None)
+print("functional solved:", sol_fun_hard is not None)
+print("solutions match:", sol_imp_hard == sol_fun_hard)
+print("\nFunctional Solution:")
+print_sudoku(sol_fun_hard)
 print("\nImperative Solution:")
-print_sudoku(sol_imp)
-print("Functional Solution:")
-print_sudoku(sol_fun)
+print_sudoku(sol_imp_hard)
+# print("Functional Solution:")
+# print_sudoku(sol_fun)
