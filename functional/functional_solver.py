@@ -62,14 +62,17 @@ def compose_board_transforms(
     Higher-order function that composes board transformation functions.
     Takes multiple functions and returns their composition (right to left).
     If any function returns None, the whole composition returns None.
+    Implemented recursively to follow the functional paradigm (no loops).
     """
     def composed(board: Board) -> Optional[Board]:
-        result = board
-        for func in reversed(funcs):
+        def apply_funcs(idx: int, result: Optional[Board]) -> Optional[Board]:
             if result is None:
                 return None
-            result = func(result)
-        return result
+            if idx < 0:
+                return result
+            return apply_funcs(idx - 1, funcs[idx](result))
+        return apply_funcs(len(funcs) - 1, board)
+    return composed
     
     return composed
 
