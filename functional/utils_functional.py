@@ -314,41 +314,63 @@ def is_solved(board: Board) -> bool:
 # Demonstrates functional approach to validation with custom higher-order helpers
 # ============================================================================
 def has_conflict(board: Board) -> bool:
-    """Check if any row, column, or box has duplicate non-zero values"""
-    
-    # Pure function to check if a sequence has duplicates (ignoring zeros)
+    """Check if any row, column, or box has duplicate non-zero values (pure recursion, no loops)"""
+
+    # Pure recursive function to check if a tuple has duplicate non-zero values
     def has_duplicates(values: Tuple[int, ...]) -> bool:
-        non_zero = custom_filter(lambda x: x != 0, values)
-        return len(non_zero) != len(set(non_zero))
-    
-    # Check all rows using custom_any
-    rows_conflict = custom_any(tuple(has_duplicates(board[r]) for r in range(9)))
-    
-    # Check all columns using custom_any
-    cols_conflict = custom_any(tuple(
-        has_duplicates(tuple(board[r][c] for r in range(9)))
-        for c in range(9)
-    ))
-    
-    # Check all 3x3 boxes using recursion
-    def check_boxes(positions: List[Tuple[int, int]]) -> bool:
-        if not positions:  # base case
+        # Filter out zeros using recursion
+        def filter_nonzero(idx: int, acc: Tuple[int, ...]) -> Tuple[int, ...]:
+            if idx == len(values):
+                return acc
+            val = values[idx]
+            if val != 0:
+                return filter_nonzero(idx + 1, acc + (val,))
+            return filter_nonzero(idx + 1, acc)
+        non_zero = filter_nonzero(0, ())
+        # Check for duplicates recursively, not using set
+        def has_dupe_rec(seq: Tuple[int, ...], seen: Tuple[int, ...]) -> bool:
+            if not seq:
+                return False
+            if seq[0] in seen:
+                return True
+            return has_dupe_rec(seq[1:], seen + (seq[0],))
+        return has_dupe_rec(non_zero, ())
+
+    # Recursively check all rows for duplicates
+    def rows_conflict_rec(idx: int) -> bool:
+        if idx == 9:
             return False
-        br, bc = positions[0]
-        
+        return has_duplicates(board[idx]) or rows_conflict_rec(idx + 1)
+
+    # Recursively check all columns for duplicates
+    def cols_conflict_rec(idx: int) -> bool:
+        if idx == 9:
+            return False
+        # Construct the column recursively
+        def build_col(ci: int, acc: Tuple[int, ...]) -> Tuple[int, ...]:
+            if ci == 9:
+                return acc
+            return build_col(ci + 1, acc + (board[ci][idx],))
+        col = build_col(0, ())
+        return has_duplicates(col) or cols_conflict_rec(idx + 1)
+
+    # Recursively check all 3x3 boxes for duplicates
+    def boxes_conflict_rec(index: int) -> bool:
+        if index == 9:
+            return False
+        br = (index // 3) * 3
+        bc = (index % 3) * 3
         # Collect box values recursively
-        box_vals = tuple(
-            board[rr][cc]
-            for rr in range(br, br + 3)
-            for cc in range(bc, bc + 3)
-        )
-        # Check current box or recurse to next
-        return has_duplicates(box_vals) or check_boxes(positions[1:])
-    
-    box_positions = [(br, bc) for br in (0, 3, 6) for bc in (0, 3, 6)]
-    boxes_conflict = check_boxes(box_positions)
-    
-    return rows_conflict or cols_conflict or boxes_conflict
+        def box_vals_rec(dr: int, dc: int, acc: Tuple[int, ...]) -> Tuple[int, ...]:
+            if dr == 3:
+                return acc
+            if dc == 3:
+                return box_vals_rec(dr + 1, 0, acc)
+            return box_vals_rec(dr, dc + 1, acc + (board[br + dr][bc + dc],))
+        vals = box_vals_rec(0, 0, ())
+        return has_duplicates(vals) or boxes_conflict_rec(index + 1)
+
+    return rows_conflict_rec(0) or cols_conflict_rec(0) or boxes_conflict_rec(0)
 
 
 # ============================================================================

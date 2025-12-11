@@ -125,25 +125,6 @@ Imperative programming is a **procedural** programming paradigm that uses **stat
 
 ---
 
-### 🔸 Object-Oriented Programming
-
-#### **Definition:**
-Object-oriented programming (OOP) is a paradigm based on the concept of **objects** that contain data (attributes) and code (methods). It emphasizes **encapsulation**, **inheritance**, and **polymorphism**.
-
-#### **Core Concepts:**
-
-1. **Encapsulation**: Bundle data and methods together
-2. **Abstraction**: Hide complex implementation details
-3. **Inheritance**: Create new classes from existing ones
-4. **Polymorphism**: Same interface, different implementations
-
-#### **Usage in This Project:**
-- Used for the **GUI** (`UI/sudoku.py`)
-- `Sudoku` class: Handles puzzle generation
-- `SudokuGUI` class: Manages user interface
-- Combines with imperative paradigm for UI logic
-
----
 
 ## 🗂️ Project Structure
 
@@ -257,6 +238,88 @@ def set_cell(board: Board, r: int, c: int, val: int) -> None:
 | **Debugging** | Easier (no hidden state) | Harder (state changes) |
 | **Code Length** | More verbose | More concise |
 | **Predictability** | High (pure functions) | Lower (side effects) |
+
+---
+
+## 📘 Function Reference & Paradigm Alignment
+
+Use this section to quickly see which **data shape** each paradigm uses and where **higher-order programming** is applied. Each entry explains the paradigm concept, what the function does, and how it achieves it.
+
+### Functional (immutable tuple-of-tuples)
+- **Board shape:** `Tuple[Tuple[int, ...], ...]` (immutable 9x9); `CandidatesBoard` is nested tuples.
+- **custom_map / custom_filter / custom_reduce / custom_all / custom_any** (`functional/utils_functional.py`)  
+  - *Concept:* Higher-order (takes a function) + immutability.  
+  - *How:* Recursive replacements for Python built-ins; always return tuples/booleans with no mutation.
+- **map_2d** (`functional/utils_functional.py`)  
+  - *Concept:* Higher-order mapping over the 2D grid.  
+  - *How:* Applies a provided `(r, c) -> value` across 9x9, returns immutable tuples.
+- **filter_and_transform** (`functional/utils_functional.py`)  
+  - *Concept:* Higher-order filter + map combined.  
+  - *How:* Predicate then transformer applied recursively; returns filtered/transformed tuple.
+- **fold_board** (`functional/utils_functional.py`)  
+  - *Concept:* Higher-order fold/reduce over a 2D immutable board.  
+  - *How:* Recursively accumulates via `(acc, r, c, value) -> acc` function.
+- **set_cell** (`functional/functional_solver.py`)  
+  - *Concept:* Immutability + higher-order (custom_map).  
+  - *How:* Builds a new row/board using custom_map; original board untouched.
+- **candidates_for / all_candidates** (`functional/utils_functional.py`)  
+  - *Concept:* Pure/immutable; uses custom_filter/custom_map to derive candidates.  
+  - *How:* Combines row/col/box values, filters 1–9 to available numbers.
+- **is_solved / cell_has_no_candidates** (`functional/utils_functional.py`)  
+  - *Concept:* Declarative checks via fold_board.  
+  - *How:* Folds booleans across the board (all filled / any empty).
+- **has_conflict** (`functional/utils_functional.py`)  
+  - *Concept:* Pure recursion; higher-order via custom_filter/custom_any pattern.  
+  - *How:* Recursively builds row/col/box tuples, checks duplicates without sets.
+- **try_each** (`functional/functional_solver.py`)  
+  - *Concept:* Higher-order factory (returns function).  
+  - *How:* Builds a “try all candidates” function that tests values until success.
+- **compose_board_transforms** (`functional/functional_solver.py`)  
+  - *Concept:* Higher-order composition.  
+  - *How:* Recursively composes board-transform functions; short-circuits on `None`.
+- **propagate** (`functional/functional_solver.py`)  
+  - *Concept:* Recursion + higher-order helpers (custom_filter/custom_reduce).  
+  - *How:* Repeatedly fills singleton cells immutably until fixed point or contradiction.
+- **choose_mrv_cell** (`functional/functional_solver.py`)  
+  - *Concept:* Fold with custom_reduce.  
+  - *How:* Scans empty cells to pick the one with fewest candidates.
+- **search / solve** (`functional/functional_solver.py`)  
+  - *Concept:* Pure recursive backtracking + higher-order try_each.  
+  - *How:* Propagate → pick MRV → try candidates immutably; `solve` normalizes input and converts output.
+
+### Imperative (mutable list-of-lists)
+- **Board shape:** `List[List[int]]` (mutable 9x9); `CandidatesBoard` is nested lists.
+- **apply_to_cells** (`imperative/utils_imperative.py`)  
+  - *Concept:* Higher-order (takes function) with mutation allowed.  
+  - *How:* Iterates all cells, invoking the provided `(r, c)` action.
+- **collect_from_cells / collect_with_predicate** (`imperative/utils_imperative.py`)  
+  - *Concept:* Higher-order collectors.  
+  - *How:* Walks the grid, gathers non-`None` results or predicate-filtered extracts.
+- **copy_board** (`imperative/utils_imperative.py`)  
+  - *Concept:* Mutability management.  
+  - *How:* Deep-copies list-of-lists to isolate side effects when needed.
+- **candidates_for / all_candidates** (`imperative/utils_imperative.py`)  
+  - *Concept:* Procedural derivation.  
+  - *How:* Builds used numbers from row/col/box, returns mutable candidate lists.
+- **is_solved / has_conflict** (`imperative/utils_imperative.py`)  
+  - *Concept:* Procedural checks; has_conflict uses higher-order collect_with_predicate for columns.  
+  - *How:* Scans rows/cols/boxes, detects zeros or duplicates.
+- **propagate** (`imperative/solver_imperative.py`)  
+  - *Concept:* Imperative loop + higher-order collect_from_cells.  
+  - *How:* Finds singletons, mutates board in place until stable or contradiction.
+- **choose_mrv_cell** (`imperative/solver_imperative.py`)  
+  - *Concept:* Procedural search.  
+  - *How:* Loops over empty cells, picks minimum candidates.
+- **search / solve** (`imperative/solver_imperative.py`)  
+  - *Concept:* Recursive backtracking with mutable copies.  
+  - *How:* Copies board, propagates, picks MRV, tries candidates by mutation; `solve` normalizes and returns a list-of-lists.
+- **create_backtracking_solver** (`imperative/solver_imperative.py`)  
+  - *Concept:* Higher-order factory (returns solver function).  
+  - *How:* Captures optional `max_depth` and delegates to `search`, demonstrating closures in imperative code.
+
+**Quick rule of thumb:**  
+- Functional files (`functional/`) → tuple-of-tuples, pure/immutable, custom higher-order helpers.  
+- Imperative files (`imperative/`) → list-of-lists, direct mutation, higher-order helpers that operate on mutable state.
 
 ---
 
