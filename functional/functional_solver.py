@@ -1,7 +1,3 @@
-# functional_solver.py
-# PARADIGM NOTE: Functional solver uses immutable tuple-of-tuples boards.
-# Higher-order achieved via custom_* helpers (map/filter/reduce analogs) and
-# function factories like try_each/compose_board_transforms.
 from typing import Optional, Tuple, Callable, TypeVar
 from functional.utils_functional import (
     Board,
@@ -21,13 +17,6 @@ from functional.utils_functional import (
 
 T = TypeVar('T')
 
-# ============================================================================
-# CUSTOM HIGHER-ORDER FUNCTION: try_each
-# PARADIGM: Higher-Order Function (takes function, returns function)
-# WHY: Demonstrates function composition and function factories
-# HOW: Takes a test function and returns a new function that tries multiple values
-# This is a higher-order function that RETURNS a function (closure)
-# ============================================================================
 def try_each(test_func: Callable[[T], Optional[Board]]) -> Callable[[Tuple[T, ...]], Optional[Board]]:
     """
     Higher-order function that creates a 'try each' function.
@@ -45,13 +34,6 @@ def try_each(test_func: Callable[[T], Optional[Board]]) -> Callable[[Tuple[T, ..
 
     return try_all
 
-# ============================================================================
-# CUSTOM HIGHER-ORDER FUNCTION: compose_board_transforms
-# PARADIGM: Higher-Order Function (function composition)
-# WHY: Composes multiple board transformation functions into one
-# HOW: Takes multiple functions and returns their composition
-# Classic functional programming pattern - building complex operations from simple ones
-# ============================================================================
 def compose_board_transforms(
     *funcs: Callable[[Board], Optional[Board]]
 ) -> Callable[[Board], Optional[Board]]:
@@ -71,12 +53,7 @@ def compose_board_transforms(
         return apply_funcs(len(funcs) - 1, board)
     return composed
 
-# ============================================================================
-# PARADIGM: Immutability + Functional Programming using custom_map
-# WHY: Board updates must be pure - no mutation, return new board instead
-# HOW: Uses custom_map to transform each row, building immutable structure
-# Higher-order achieved via custom_map taking a transformer function
-# ============================================================================
+
 def set_cell(board: Board, r: int, c: int, val: int) -> Board:
     """
     Create a new board with a single cell updated (immutable update).
@@ -95,13 +72,7 @@ def set_cell(board: Board, r: int, c: int, val: int) -> Board:
         range(9)
     )
 
-# ============================================================================
-# PARADIGM: Recursion + Functional Programming using custom_filter/custom_map/custom_reduce
-# WHY: Constraint propagation is naturally recursive - keep applying until stable
-# HOW: Tail-recursive function that finds singleton cells and fills them
-# Uses custom_filter to find singletons, custom_reduce to apply updates immutably
-# This is pure functional iteration - no loops, no mutation, just recursion
-# ============================================================================
+
 def propagate(board: Board) -> Optional[Board]:
     """
     Apply constraint propagation: repeatedly fill cells that have only one candidate.
@@ -146,12 +117,7 @@ def propagate(board: Board) -> Optional[Board]:
 
     return loop(board)
 
-# ============================================================================
-# PARADIGM: Functional Programming using custom_reduce (fold operation)
-# WHY: Finding minimum is a classic fold operation - accumulate best choice
-# HOW: Uses custom_reduce to fold over all cells, accumulating the minimum
-# Demonstrates functional aggregation without explicit loops or mutation
-# ============================================================================
+
 def choose_mrv_cell(board: Board) -> Optional[Tuple[int, int, Tuple[int, ...]]]:
     """
     Choose cell with Minimum Remaining Values (MRV heuristic).
@@ -188,13 +154,6 @@ def choose_mrv_cell(board: Board) -> Optional[Tuple[int, int, Tuple[int, ...]]]:
 
     return custom_reduce(min_candidates, all_cells, None)
 
-# ============================================================================
-# PARADIGM: Recursion (backtracking) + Tail-Call Optimization Pattern
-# WHY: Sudoku solving is inherently recursive - try choices and backtrack
-# HOW: Recursive search tries each candidate value, returns on first success
-# This is classic functional backtracking - no mutation, just recursive exploration
-# Uses recursion for both propagation and candidate exploration
-# ============================================================================
 def search(board: Board) -> Optional[Board]:
     """
     Recursive backtracking search with constraint propagation.
@@ -215,12 +174,7 @@ def search(board: Board) -> Optional[Board]:
     try_all_candidates = try_each(test_candidate)
     return try_all_candidates(candidates)
 
-# ============================================================================
-# PARADIGM: Pure Function + Referential Transparency
-# WHY: Public API should be pure - no side effects, deterministic results
-# HOW: Validates input, delegates to pure recursive search, converts result
-# Maintains functional purity throughout - input board never modified
-# ============================================================================
+
 def solve(input_board) -> Optional[list]:
     """
     Public API: solve a Sudoku puzzle.

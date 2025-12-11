@@ -1,7 +1,4 @@
-# functional_helpers.py file
-# PARADIGM NOTE: Functional style uses immutable tuple-of-tuples for boards.
-# Higher-order programming is achieved via custom_* helpers (map/filter/reduce/all/any)
-# and domain-specific helpers like map_2d, filter_and_transform, fold_board.
+
 from typing import Tuple, List, Callable, TypeVar
 
 # Types
@@ -11,11 +8,6 @@ CandidatesBoard = Tuple[Tuple[Tuple[int, ...], ...], ...]  # 9x9 of candidate tu
 # Generic type variables for higher-order functions
 T = TypeVar('T')
 U = TypeVar('U')
-
-
-# ============================================================================
-# CORE CUSTOM HIGHER-ORDER HELPERS (replace built-in map/filter/reduce/all/any)
-# ============================================================================
 
 def custom_map(func: Callable[[T], U], items) -> Tuple[U, ...]:
     """
@@ -98,14 +90,6 @@ def custom_any(items) -> bool:
         return False
     return bool(items_tuple[0]) or custom_any(items_tuple[1:])
 
-
-# ============================================================================
-# CUSTOM HIGHER-ORDER FUNCTION #1: map_2d
-# PARADIGM: Higher-Order Function (takes function as parameter)
-# WHY: Demonstrates custom higher-order function in functional paradigm
-# HOW: Takes a transformation function and applies it to every element in 2D structure
-# This is our own implementation instead of nested built-in map() calls
-# ============================================================================
 def map_2d(func: Callable[[int, int], T], rows: int = 9, cols: int = 9) -> Tuple[Tuple[T, ...], ...]:
     """
     map_2d applies a given function `func` to every (row, col) coordinate
@@ -125,13 +109,6 @@ def map_2d(func: Callable[[int, int], T], rows: int = 9, cols: int = 9) -> Tuple
     return tuple(build_row(r) for r in range(rows))
 
 
-# ============================================================================
-# CUSTOM HIGHER-ORDER FUNCTION #2: filter_and_transform
-# PARADIGM: Higher-Order Function (takes predicate and transformer functions)
-# WHY: Combines filtering and transformation in one higher-order operation
-# HOW: Takes a predicate and a transformation function, applies both
-# More powerful than just filter - it's filter + map combined
-# ============================================================================
 def filter_and_transform(
     predicate: Callable[[T], bool],
     transformer: Callable[[T], U],
@@ -158,14 +135,6 @@ def filter_and_transform(
     
     return process_all(items)
 
-
-# ============================================================================
-# CUSTOM HIGHER-ORDER FUNCTION #3: fold_board
-# PARADIGM: Higher-Order Function (fold/reduce over 2D structure)
-# WHY: Custom fold implementation for board operations
-# HOW: Takes accumulator function and applies it to all board cells
-# This is like reduce() but specialized for 2D board structures
-# ============================================================================
 def fold_board(
     func: Callable[[T, int, int, int], T],
     board: Board,
@@ -197,47 +166,21 @@ def fold_board(
     return fold_rows_recursive(initial, 0)
 
 
-# ============================================================================
-# PARADIGM: Functional Programming using custom_map (no built-ins)
-# WHY: Uses our own map implementation across nested structures
-# HOW: Transforms each row with an inner custom_map, then transforms all rows
-# Higher-order achieved via custom_map taking a function
-# ============================================================================
+
 def to_immutable(board: List[List[int]]) -> Board:
     """Convert mutable list-of-lists -> immutable tuple-of-tuples"""
     return tuple(
         custom_map(lambda cell: int(cell), row) for row in board
     )
 
-
-# ============================================================================
-# PARADIGM: Functional Programming using custom_map (no built-ins)
-# WHY: Uses custom_map to transform immutable structures back to mutable ones
-# HOW: Applies list() constructor via custom_map to convert tuples to lists
-# Higher-order achieved via custom_map taking a function
-# ============================================================================
 def from_immutable(board: Board) -> List[List[int]]:
     """Convert back to list-of-lists (for printing)"""
     return [list(row) for row in board]
 
-
-# ============================================================================
-# PARADIGM: Functional Programming using custom_filter (no built-ins)
-# WHY: Declaratively selects values that meet a condition (non-zero)
-# HOW: custom_filter takes a predicate function and returns matching values
-# Higher-order achieved via predicate passed in
-# ============================================================================
 def row_values(board: Board, r: int) -> Tuple[int, ...]:
     """Get all non-zero values from a specific row"""
     return custom_filter(lambda v: v != 0, board[r])
 
-
-# ============================================================================
-# PARADIGM: Functional Programming using custom_filter (no built-ins)
-# WHY: Declaratively extracts a column then filters zeros
-# HOW: Builds the column with a comprehension, filters via custom_filter
-# Higher-order achieved via predicate passed in
-# ============================================================================
 def col_values(board: Board, c: int) -> Tuple[int, ...]:
     """Get all non-zero values from a specific column"""
     column = tuple(board[r][c] for r in range(9))
@@ -262,13 +205,6 @@ def box_values(board: Board, r: int, c: int) -> Tuple[int, ...]:
     
     return collect_rows(br)
 
-
-# ============================================================================
-# PARADIGM: Functional Programming using custom_filter + Immutability
-# WHY: Declaratively computes available candidates using set operations
-# HOW: Uses custom_filter to select valid candidates, combines sets functionally
-# Pure function - same input always produces same output, no side effects
-# ============================================================================
 def candidates_for(board: Board, r: int, c: int) -> Tuple[int, ...]:
     """Get all valid candidates for a cell (1-9 that don't violate constraints)"""
     if board[r][c] != 0:
@@ -280,24 +216,10 @@ def candidates_for(board: Board, r: int, c: int) -> Tuple[int, ...]:
     # Filter digits 1-9 to find available candidates
     return custom_filter(lambda x: x not in used, tuple(range(1, 10)))
 
-
-# ============================================================================
-# PARADIGM: Using Custom Higher-Order Function (map_2d)
-# WHY: Uses our custom higher-order function instead of built-in map
-# HOW: map_2d takes a function and applies it to every (row, col) position
-# Demonstrates creating and using our own higher-order functions
-# ============================================================================
 def all_candidates(board: Board) -> CandidatesBoard:
     """Compute candidates for every cell in the board using custom higher-order function"""
     return map_2d(lambda r, c: candidates_for(board, r, c))
 
-
-# ============================================================================
-# PARADIGM: Using Custom Higher-Order Function (fold_board)
-# WHY: Uses our custom fold to check all cells instead of built-in all()
-# HOW: fold_board accumulates a boolean, checking each cell is non-zero
-# Demonstrates functional folding/reduction with custom higher-order function
-# ============================================================================
 def is_solved(board: Board) -> bool:
     """Check if board is completely filled (no zeros remaining) using custom fold"""
     return fold_board(
@@ -306,13 +228,6 @@ def is_solved(board: Board) -> bool:
         True  # initial: assume solved until we find a zero
     )
 
-
-# ============================================================================
-# PARADIGM: Functional Programming using custom_any/custom_filter + Recursion
-# WHY: Checks for conflicts using existential quantification (any violation exists)
-# HOW: Uses recursive helper for boxes, custom_any/custom_filter for rows/cols
-# Demonstrates functional approach to validation with custom higher-order helpers
-# ============================================================================
 def has_conflict(board: Board) -> bool:
     """Check if any row, column, or box has duplicate non-zero values (pure recursion, no loops)"""
 
@@ -373,12 +288,6 @@ def has_conflict(board: Board) -> bool:
     return rows_conflict_rec(0) or cols_conflict_rec(0) or boxes_conflict_rec(0)
 
 
-# ============================================================================
-# PARADIGM: Using Custom Higher-Order Function (fold_board)
-# WHY: Uses our custom fold to check for empty candidates instead of built-in any()
-# HOW: fold_board accumulates a boolean, checking if any cell has no candidates
-# Demonstrates existential quantification with custom higher-order function
-# ============================================================================
 def cell_has_no_candidates(cands_board: CandidatesBoard) -> bool:
     """Check if any cell has no valid candidates (unsolvable state) using custom fold"""
     return fold_board(
